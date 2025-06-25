@@ -69,7 +69,7 @@ export default function ForgotPasswordPage() {
             Tentar outro email
           </Button>
           
-          <Link href="/auth/login">
+          <Link href="/login">
             <Button variant="ghost" className="w-full">
               Voltar para o login
             </Button>
@@ -120,7 +120,7 @@ export default function ForgotPasswordPage() {
 
       <div className="mt-6 text-center">
         <Link
-          href="/auth/login"
+          href="/login"
           className="font-medium text-primary-600 hover:text-primary-500"
         >
           Voltar para o login

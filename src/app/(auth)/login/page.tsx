@@ -90,7 +90,7 @@ export default function LoginPage() {
 
           <div className="text-sm">
             <Link
-              href="/auth/forgot-password"
+              href="/forgot-password"
               className="font-medium text-primary-600 hover:text-primary-500"
             >
               Esqueceu a senha?
@@ -118,7 +118,7 @@ export default function LoginPage() {
         </div>
 
         <div className="mt-6">
-          <Link href="/auth/register">
+          <Link href="/register">
             <Button variant="outline" className="w-full">
               Criar conta gratuita
             </Button>

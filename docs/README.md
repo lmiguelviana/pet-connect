@@ -128,6 +128,18 @@ Portal exclusivo para administração do SaaS:
 - Backup automático
 - Row Level Security (RLS)
 
+## 📚 Documentação Disponível
+
+### 🏗️ Arquitetura e Planejamento
+- [`arquitetura.md`](./arquitetura.md) - Visão geral da arquitetura
+- [`banco-dados.md`](./banco-dados.md) - Estrutura completa do banco
+- [`banco-dados-reset.md`](./banco-dados-reset.md) - Script de reset e configuração
+- [`supabase-setup-completo.md`](./supabase-setup-completo.md) - Guia completo de setup
+
+### 📋 Fases de Desenvolvimento
+- [`fases/`](./fases/) - Todas as fases planejadas
+- [`Fases Concluidas/`](./Fases%20Concluidas/) - Fases já implementadas
+
 ## 📁 Estrutura da Documentação
 
 - `README.md` - Visão geral do projeto

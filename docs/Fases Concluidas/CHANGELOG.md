@@ -13,6 +13,50 @@
 
 ---
 
+## [0.1.1] - 2025-01-XX - Configuração Supabase Completa ✅
+
+### ✨ Adicionado
+
+#### 🔧 Configuração do Supabase
+- Credenciais do projeto Supabase configuradas
+- URL: `https://pgegztuaelhbonurccgt.supabase.co`
+- Chave anon configurada no `.env.local`
+- Validação automática de variáveis de ambiente
+
+#### 🛡️ Sistema de Validação
+- Detecção de placeholders não configurados
+- Mensagens de erro específicas e claras
+- Redirecionamento automático para página de setup
+- Verificação de cliente Supabase antes do uso
+
+#### 🎨 Interface de Configuração
+- Componente `SetupGuide` para orientação visual
+- Página `/setup` com instruções detalhadas
+- Cards informativos com passos de configuração
+- Alertas visuais para status de configuração
+
+### 🔧 Alterado
+
+#### 📁 Estrutura de Arquivos
+- `src/lib/supabase.ts`: Validação de environment variables
+- `src/lib/supabase-server.ts`: Verificação de placeholders
+- `src/contexts/auth-context.tsx`: Error handling robusto
+- `src/components/setup/setup-guide.tsx`: Novo componente
+- `src/app/setup/page.tsx`: Nova página de configuração
+
+#### 🐛 Correções
+- Erro "Invalid URL" do Supabase resolvido
+- Middleware atualizado para verificar cliente
+- AuthContext com verificação de inicialização
+- Funções de autenticação com validação prévia
+
+### 📊 Performance
+- Servidor rodando sem erros em `http://localhost:3000`
+- Tempo de inicialização otimizado
+- Detecção rápida de problemas de configuração
+
+---
+
 ## [0.1.0] - 2024-12-XX - Fase 1 Concluída ✅
 
 ### ✨ Adicionado

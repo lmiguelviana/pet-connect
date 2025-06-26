@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/auth-context'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -29,7 +29,7 @@ export default function NewClientPage() {
   const router = useRouter()
   const { company } = useAuth()
   const [loading, setLoading] = useState(false)
-  const supabase = createClientComponentClient<Database>()
+  const supabase = createClient()
 
   const {
     register,

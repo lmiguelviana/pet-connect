@@ -2,15 +2,22 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/contexts/auth-context'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { PlusIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import { toast } from 'react-hot-toast'
-import { Database } from '@/types/database'
 
-type Client = Database['public']['Tables']['clients']['Row'] & {
+type Client = {
+  id: string
+  name: string
+  email: string
+  phone: string
+  avatar_url?: string
+  is_active: boolean
+  created_at: string
+  company_id: string
   _count?: {
     pets: number
     appointments: number
@@ -23,7 +30,7 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('active')
-  const supabase = createClientComponentClient<Database>()
+  const supabase = createClient()
 
   useEffect(() => {
     if (company?.id) {

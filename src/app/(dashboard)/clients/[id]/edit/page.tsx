@@ -6,16 +6,26 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'react-hot-toast'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { ArrowLeft, Save, Loader2 } from 'lucide-react'
-import type { Database } from '@/types/database'
 
-type Client = Database['public']['Tables']['clients']['Row']
+type Client = {
+  id: string
+  name: string
+  email: string
+  phone: string
+  avatar_url?: string
+  address?: string
+  notes?: string
+  is_active: boolean
+  created_at: string
+  company_id: string
+}
 
 const clientSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -34,7 +44,7 @@ export default function EditClientPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [client, setClient] = useState<Client | null>(null)
-  const supabase = createClientComponentClient<Database>()
+  const supabase = createClient()
 
   const {
     register,

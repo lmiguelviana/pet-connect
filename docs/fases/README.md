@@ -7,7 +7,7 @@ Este diretório contém a documentação detalhada de todas as fases de desenvol
 ### Fase 0: Landing Page
 **Arquivo:** [`fase-00-landing-page.md`](./fase-00-landing-page.md)  
 **Tempo estimado:** 2-3 dias  
-**Status:** 🟡 Pendente
+**Status:** ✅ Concluída
 
 - Página de apresentação do Pet Connect
 - Seção de benefícios e recursos
@@ -18,7 +18,7 @@ Este diretório contém a documentação detalhada de todas as fases de desenvol
 ### Fase 1: Setup e Configuração Inicial
 **Arquivo:** [`fase-01-setup.md`](./fase-01-setup.md)  
 **Tempo estimado:** 1-2 dias  
-**Status:** 🟡 Pendente
+**Status:** ✅ Concluída
 
 - Configuração do ambiente de desenvolvimento
 - Criação do projeto Next.js com TypeScript
@@ -29,7 +29,7 @@ Este diretório contém a documentação detalhada de todas as fases de desenvol
 ### Fase 2: Sistema de Autenticação
 **Arquivo:** [`fase-02-autenticacao.md`](./fase-02-autenticacao.md)  
 **Tempo estimado:** 2-3 dias  
-**Status:** 🟡 Pendente
+**Status:** ✅ Concluída
 
 - Configuração do Supabase Auth
 - Páginas de login e registro
@@ -40,7 +40,7 @@ Este diretório contém a documentação detalhada de todas as fases de desenvol
 ### Fase 3: Dashboard Principal
 **Arquivo:** [`fase-03-dashboard.md`](./fase-03-dashboard.md)  
 **Tempo estimado:** 3-4 dias  
-**Status:** 🟡 Pendente
+**Status:** ✅ Concluída
 
 - Layout do sistema com sidebar e header
 - Dashboard com métricas em tempo real
@@ -51,7 +51,7 @@ Este diretório contém a documentação detalhada de todas as fases de desenvol
 ### Fase 4: Gestão de Clientes
 **Arquivo:** [`fase-04-clientes.md`](./fase-04-clientes.md)  
 **Tempo estimado:** 4-5 dias  
-**Status:** 🟡 Pendente
+**Status:** ✅ Concluída
 
 - CRUD completo de clientes
 - Formulários de cadastro e edição

@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/contexts/auth-context'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import type { Database } from '@/types/database'
+import { createClient } from '@/lib/supabase'
 import { Card } from '@/components/ui/card'
 import {
   UsersIcon,
@@ -38,7 +37,7 @@ export function StatsCards() {
   const fetchStats = async () => {
     try {
       setLoading(true)
-      const supabase = createClientComponentClient<Database>()
+      const supabase = createClient()
 
       // Buscar total de clientes
       const { count: clientsCount } = await supabase

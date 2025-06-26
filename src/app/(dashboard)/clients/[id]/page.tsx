@@ -2,16 +2,40 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { createClient } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft, Edit, Trash2, User, Mail, Phone, MapPin, FileText, Calendar, Loader2 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
-import type { Database } from '@/types/database'
 
-type Client = Database['public']['Tables']['clients']['Row']
-type Pet = Database['public']['Tables']['pets']['Row']
+
+type Client = {
+  id: string
+  name: string
+  email: string
+  phone: string
+  avatar_url?: string
+  address?: string
+  notes?: string
+  is_active: boolean
+  created_at: string
+  company_id: string
+}
+
+type Pet = {
+  id: string
+  name: string
+  species: string
+  breed?: string
+  age?: number
+  weight?: number
+  avatar_url?: string
+  is_active: boolean
+  created_at: string
+  client_id: string
+  company_id: string
+}
 
 export default function ClientDetailsPage() {
   const router = useRouter()
@@ -21,7 +45,7 @@ export default function ClientDetailsPage() {
   const [client, setClient] = useState<Client | null>(null)
   const [pets, setPets] = useState<Pet[]>([])
   const [deleting, setDeleting] = useState(false)
-  const supabase = createClientComponentClient<Database>()
+  const supabase = createClient()
 
   useEffect(() => {
     loadClientData()

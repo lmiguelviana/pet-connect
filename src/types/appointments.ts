@@ -1,10 +1,10 @@
 export interface Appointment {
   id: string
-  date: string
-  start_time: string
-  end_time: string
+  date_time: string
+  duration_minutes: number
   status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show'
   notes: string | null
+  service_price: number | null
   total_amount: number | null
   created_at: string
   updated_at: string
@@ -85,5 +85,5 @@ export interface AppointmentFormData {
   date: string
   start_time: string
   notes?: string
-  send_notification?: boolean
+  send_notification: boolean
 }

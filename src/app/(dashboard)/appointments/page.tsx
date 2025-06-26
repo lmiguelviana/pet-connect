@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { PlusIcon, CalendarIcon, ListBulletIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import { toast } from 'react-hot-toast'
-import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns'
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, addDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { clsx } from 'clsx'
 import { Appointment, AppointmentFilters as Filters } from '@/types/appointments'
@@ -78,16 +78,11 @@ export default function AppointmentsPage() {
             duration,
             price,
             color
-          ),
-          notifications:notifications(
-            id,
-            type,
-            sent_at
           )
         `)
         .eq('company_id', company!.id)
-        .gte('date', format(startDate, 'yyyy-MM-dd'))
-        .lte('date', format(endDate, 'yyyy-MM-dd'))
+        .gte('date_time', startDate.toISOString())
+        .lte('date_time', endDate.toISOString())
 
       // Aplicar filtros
       if (statusFilter !== 'all') {
@@ -99,8 +94,7 @@ export default function AppointmentsPage() {
       }
 
       // Ordenar por data e hora
-      query = query.order('date', { ascending: true })
-                   .order('start_time', { ascending: true })
+      query = query.order('date_time', { ascending: true })
 
       const { data, error } = await query
 

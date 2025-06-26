@@ -14,6 +14,7 @@ import { useAuth } from '@/contexts/auth-context'
 export default function ServicesPage() {
   const router = useRouter()
   const { user } = useAuth()
+  const supabase = createClient()
   const [services, setServices] = useState<ServiceWithPhotos[]>([])
   const [stats, setStats] = useState<ServiceStatsType>({
     total: 0,

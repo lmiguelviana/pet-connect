@@ -140,7 +140,7 @@ export function AppointmentList({
               {/* Appointments for this date */}
               <div className="space-y-4">
                 {dayAppointments
-                  .sort((a, b) => a.start_time.localeCompare(b.start_time))
+                  .sort((a, b) => new Date(a.date_time).getTime() - new Date(b.date_time).getTime())
                   .map((appointment) => (
                     <AppointmentCard
                       key={appointment.id}

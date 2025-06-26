@@ -68,8 +68,8 @@ export function AppointmentCalendar({
 
   const getAppointmentsForDay = (day: Date) => {
     return appointments
-      .filter(appointment => isSameDay(parseISO(appointment.date), day))
-      .sort((a, b) => a.start_time.localeCompare(b.start_time))
+      .filter(appointment => isSameDay(new Date(appointment.date_time), day))
+      .sort((a, b) => new Date(a.date_time).getTime() - new Date(b.date_time).getTime())
   }
 
   const timeSlots = [

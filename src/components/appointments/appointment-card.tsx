@@ -15,7 +15,7 @@ import {
   PhoneIcon,
   EnvelopeIcon
 } from '@heroicons/react/24/outline'
-import { format } from 'date-fns'
+import { format, addMinutes } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { clsx } from 'clsx'
 import Link from 'next/link'
@@ -91,7 +91,8 @@ export function AppointmentCard({
             <div className="flex items-center space-x-2 mb-1">
               <ClockIcon className="h-4 w-4 text-gray-400" />
               <span className="text-sm font-medium text-gray-900">
-                {appointment.start_time} - {appointment.end_time}
+                {format(new Date(appointment.date_time), 'HH:mm', { locale: ptBR })} - 
+                {format(addMinutes(new Date(appointment.date_time), appointment.duration_minutes || 60), 'HH:mm', { locale: ptBR })}
               </span>
             </div>
             
@@ -230,8 +231,8 @@ export function AppointmentCard({
               <div className="flex items-center space-x-2">
                 <ClockIcon className="h-4 w-4" />
                 <span>
-                  {format(new Date(`2000-01-01T${appointment.start_time}`), 'HH:mm', { locale: ptBR })} - 
-                  {format(new Date(`2000-01-01T${appointment.end_time}`), 'HH:mm', { locale: ptBR })}
+                  {format(new Date(appointment.date_time), 'HH:mm', { locale: ptBR })} - 
+                  {format(addMinutes(new Date(appointment.date_time), appointment.duration_minutes || 60), 'HH:mm', { locale: ptBR })}
                 </span>
               </div>
               

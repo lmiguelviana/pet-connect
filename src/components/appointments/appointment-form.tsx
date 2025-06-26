@@ -26,7 +26,7 @@ const appointmentSchema = z.object({
   date: z.string().min(1, 'Selecione uma data'),
   start_time: z.string().min(1, 'Selecione um horário'),
   notes: z.string().optional(),
-  send_notification: z.boolean().default(true),
+  send_notification: z.boolean().default(true)
 })
 
 type AppointmentFormData = z.infer<typeof appointmentSchema>
@@ -114,8 +114,9 @@ export function AppointmentForm({
       // Buscar agendamentos existentes para a data
       const { data: existingAppointments, error } = await supabase
         .from('appointments')
-        .select('start_time, end_time')
-        .eq('date', date)
+        .select('date_time, duration_minutes')
+        .gte('date_time', `${date}T00:00:00`)
+        .lt('date_time', `${date}T23:59:59`)
         .eq('company_id', company!.id)
         .neq('status', 'cancelled')
 
@@ -137,8 +138,9 @@ export function AppointmentForm({
 
         // Verificar se o slot conflita com algum agendamento existente
         return !existingAppointments?.some(appointment => {
-          const appointmentStart = appointment.start_time
-          const appointmentEnd = appointment.end_time
+          const appointmentDateTime = new Date(appointment.date_time)
+          const appointmentStart = format(appointmentDateTime, 'HH:mm')
+          const appointmentEnd = format(addMinutes(appointmentDateTime, appointment.duration_minutes || 60), 'HH:mm')
 
           // Verificar sobreposição
           return (
@@ -170,15 +172,18 @@ export function AppointmentForm({
       const endTime = addMinutes(startTime, selectedService.duration)
       const endTimeString = format(endTime, 'HH:mm')
 
+      // Combinar data e hora em date_time
+      const dateTime = new Date(`${data.date}T${data.start_time}:00`)
+      
       const appointmentData = {
         client_id: data.client_id,
         pet_id: data.pet_id || null,
         service_id: data.service_id,
-        date: data.date,
-        start_time: data.start_time,
-        end_time: endTimeString,
+        date_time: dateTime.toISOString(),
+        duration_minutes: selectedService.duration,
         status: 'scheduled' as const,
         notes: data.notes || null,
+        service_price: selectedService.price,
         total_amount: selectedService.price,
         company_id: company!.id,
       }

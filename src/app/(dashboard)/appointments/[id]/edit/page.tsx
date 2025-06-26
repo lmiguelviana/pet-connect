@@ -128,8 +128,8 @@ export default function EditAppointmentPage() {
             client_id: appointment.client_id,
             pet_id: appointment.pet_id || '',
             service_id: appointment.service_id,
-            date: appointment.date,
-            start_time: appointment.start_time,
+            date: new Date(appointment.date_time).toISOString().split('T')[0],
+            start_time: new Date(appointment.date_time).toTimeString().slice(0, 5),
             notes: appointment.notes || '',
           }}
           isEditing={true}

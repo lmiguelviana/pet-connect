@@ -1,11 +1,61 @@
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { createServerClient } from '@supabase/ssr'
 import { Database } from '@/types/database'
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next()
-  const supabase = createMiddlewareClient<Database>({ req, res })
+  let response = NextResponse.next({
+    request: {
+      headers: req.headers,
+    },
+  })
+
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return req.cookies.get(name)?.value
+        },
+        set(name: string, value: string, options: any) {
+          req.cookies.set({
+            name,
+            value,
+            ...options,
+          })
+          response = NextResponse.next({
+            request: {
+              headers: req.headers,
+            },
+          })
+          response.cookies.set({
+            name,
+            value,
+            ...options,
+          })
+        },
+        remove(name: string, options: any) {
+          req.cookies.set({
+            name,
+            value: '',
+            ...options,
+          })
+          response = NextResponse.next({
+            request: {
+              headers: req.headers,
+            },
+          })
+          response.cookies.set({
+            name,
+            value: '',
+            ...options,
+          })
+        },
+      },
+    }
+  )
   
   const {
     data: { session },
@@ -16,12 +66,12 @@ export async function middleware(req: NextRequest) {
   const isProtectedRoute = protectedRoutes.some(route => req.nextUrl.pathname.startsWith(route))
 
   // Rotas de autenticação
-  const authRoutes = ['/auth/login', '/auth/register', '/auth/forgot-password']
+  const authRoutes = ['/login', '/register', '/forgot-password']
   const isAuthRoute = authRoutes.some(route => req.nextUrl.pathname.startsWith(route))
 
   // Redirecionar usuários não autenticados para login
   if (isProtectedRoute && !session) {
-    return NextResponse.redirect(new URL('/auth/login', req.url))
+    return NextResponse.redirect(new URL('/login', req.url))
   }
 
   // Redirecionar usuários autenticados para dashboard
@@ -56,7 +106,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  return res
+  return response
 }
 
 export const config = {

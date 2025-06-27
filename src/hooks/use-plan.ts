@@ -1,51 +1,98 @@
 import { useAuth } from '@/contexts/auth-context'
 
-export function usePlan() {
+export type PlanType = 'free' | 'premium'
+
+interface PlanLimits {
+  maxClients: number
+  maxPets: number
+  maxUsers: number
+  hasPhotos: boolean
+  hasWhatsApp: boolean
+  hasReports: boolean
+  hasAdvancedFeatures: boolean
+}
+
+interface PlanFeatures {
+  canUploadPhotos: boolean
+  canSendWhatsApp: boolean
+  canGenerateReports: boolean
+  canAddUsers: boolean
+  hasAdvancedDashboard: boolean
+  hasPrioritySupport: boolean
+}
+
+const PLAN_LIMITS: Record<PlanType, PlanLimits> = {
+  free: {
+    maxClients: 20,
+    maxPets: 30,
+    maxUsers: 1,
+    hasPhotos: false,
+    hasWhatsApp: false,
+    hasReports: false,
+    hasAdvancedFeatures: false
+  },
+  premium: {
+    maxClients: -1, // Ilimitado
+    maxPets: -1, // Ilimitado
+    maxUsers: -1, // Ilimitado
+    hasPhotos: true,
+    hasWhatsApp: true,
+    hasReports: true,
+    hasAdvancedFeatures: true
+  }
+}
+
+export const usePlan = () => {
   const { company } = useAuth()
   
-  const isPremium = company?.plan_type === 'premium'
-  const isFree = company?.plan_type === 'free'
+  const currentPlan: PlanType = company?.plan_type || 'free'
+  const limits = PLAN_LIMITS[currentPlan]
   
-  const checkFeature = (feature: string) => {
-    if (isPremium) return true
-    
-    // Funcionalidades do plano gratuito
-    const freeFeatures = [
-      'basic_dashboard',
-      'client_management',
-      'pet_management',
-      'basic_appointments',
-      'service_management'
-    ]
-    
-    return freeFeatures.includes(feature)
+  const features: PlanFeatures = {
+    canUploadPhotos: limits.hasPhotos,
+    canSendWhatsApp: limits.hasWhatsApp,
+    canGenerateReports: limits.hasReports,
+    canAddUsers: currentPlan === 'premium',
+    hasAdvancedDashboard: limits.hasAdvancedFeatures,
+    hasPrioritySupport: currentPlan === 'premium'
   }
   
-  const getLimits = () => {
-    if (isPremium) {
-      return {
-        clients: Infinity,
-        pets: Infinity,
-        users: Infinity,
-        appointments: Infinity,
-        photos: Infinity
-      }
-    }
-    
-    return {
-      clients: 20,
-      pets: 30,
-      users: 1,
-      appointments: 10,
-      photos: 0
+  const checkLimit = (type: 'clients' | 'pets' | 'users', currentCount: number): boolean => {
+    switch (type) {
+      case 'clients':
+        return limits.maxClients === -1 || currentCount < limits.maxClients
+      case 'pets':
+        return limits.maxPets === -1 || currentCount < limits.maxPets
+      case 'users':
+        return limits.maxUsers === -1 || currentCount < limits.maxUsers
+      default:
+        return false
     }
   }
+  
+  const getRemainingLimit = (type: 'clients' | 'pets' | 'users', currentCount: number): number => {
+    switch (type) {
+      case 'clients':
+        return limits.maxClients === -1 ? -1 : Math.max(0, limits.maxClients - currentCount)
+      case 'pets':
+        return limits.maxPets === -1 ? -1 : Math.max(0, limits.maxPets - currentCount)
+      case 'users':
+        return limits.maxUsers === -1 ? -1 : Math.max(0, limits.maxUsers - currentCount)
+      default:
+        return 0
+    }
+  }
+  
+  const isPremium = currentPlan === 'premium'
+  const isFree = currentPlan === 'free'
   
   return {
+    currentPlan,
+    limits,
+    features,
+    checkLimit,
+    getRemainingLimit,
     isPremium,
-    isFree,
-    checkFeature,
-    getLimits,
-    planType: company?.plan_type || 'free'
+    isFree
   }
 }

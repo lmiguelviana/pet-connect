@@ -183,47 +183,47 @@ export default function Home() {
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-2 gap-8 justify-center">
             {/* Plano Gratuito */}
-            <Card className="group relative p-8 hover:shadow-2xl transition-all duration-500 border-2 border-gray-200 hover:border-primary-300 bg-white">
+            <Card className="group relative p-8 hover:shadow-2xl transition-all duration-500 border-2 border-gray-200 hover:border-primary-300 bg-white text-center">
               <div className="absolute inset-0 bg-gradient-to-br from-gray-50/50 to-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               <div className="relative">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-gray-500 to-gray-600 rounded-2xl mb-6 shadow-lg">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-gray-500 to-gray-600 rounded-2xl mb-6 shadow-lg mx-auto">
                   <StarIcon className="h-8 w-8 text-white" />
                 </div>
                 <CardTitle className="text-3xl mb-2">Gratuito</CardTitle>
                 <CardDescription className="mb-4">Perfeito para começar</CardDescription>
                 <div className="text-4xl font-bold mb-8">R$ 0<span className="text-lg font-normal">/mês</span></div>
-                <ul className="space-y-4 mb-10">
-                  <li className="flex items-center">
+                <ul className="space-y-4 mb-10 mx-auto text-left">
+                  <li className="flex items-center justify-center">
                     <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center mr-3">
                       <CheckIcon className="h-3 w-3 text-green-600" />
                     </div>
-                    <span className="text-gray-700">Até 20 clientes</span>
+                    <span className="text-base text-gray-700">Até 20 clientes</span>
                   </li>
-                  <li className="flex items-center">
+                  <li className="flex items-center justify-center">
                     <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center mr-3">
                       <CheckIcon className="h-3 w-3 text-green-600" />
                     </div>
-                    <span className="text-gray-700">Até 30 pets</span>
+                    <span className="text-base text-gray-700">Até 30 pets</span>
                   </li>
-                  <li className="flex items-center">
+                  <li className="flex items-center justify-center">
                     <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center mr-3">
                       <CheckIcon className="h-3 w-3 text-green-600" />
                     </div>
-                    <span className="text-gray-700">1 usuário</span>
+                    <span className="text-base text-gray-700">1 usuário</span>
                   </li>
-                  <li className="flex items-center">
+                  <li className="flex items-center justify-center">
                     <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center mr-3">
                       <CheckIcon className="h-3 w-3 text-green-600" />
                     </div>
-                    <span className="text-gray-700">Agendamentos básicos</span>
+                    <span className="text-base text-gray-700">Agendamentos básicos</span>
                   </li>
-                  <li className="flex items-center">
+                  <li className="flex items-center justify-center">
                     <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center mr-3">
                       <CheckIcon className="h-3 w-3 text-green-600" />
                     </div>
-                    <span className="text-gray-700">Suporte por email</span>
+                    <span className="text-base text-gray-700">Suporte por email</span>
                   </li>
                 </ul>
                 
@@ -236,112 +236,67 @@ export default function Home() {
             </Card>
 
             {/* Plano Básico */}
-            <Card className="relative border-primary-200">
-              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                <span className="bg-primary-600 text-white px-4 py-1 rounded-full text-sm font-medium">
-                  Mais Popular
-                </span>
-              </div>
-              <CardHeader>
-                <CardTitle className="text-2xl">Básico</CardTitle>
-                <CardDescription>Para pet shops em crescimento</CardDescription>
-                <div className="text-3xl font-bold">R$ 49<span className="text-lg font-normal">/mês</span></div>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-3 mb-6">
-                  <li className="flex items-center">
-                    <CheckIcon className="h-5 w-5 text-green-500 mr-3" />
-                    Até 100 clientes
-                  </li>
-                  <li className="flex items-center">
-                    <CheckIcon className="h-5 w-5 text-green-500 mr-3" />
-                    Até 200 pets
-                  </li>
-                  <li className="flex items-center">
-                    <CheckIcon className="h-5 w-5 text-green-500 mr-3" />
-                    3 usuários
-                  </li>
-                  <li className="flex items-center">
-                    <CheckIcon className="h-5 w-5 text-green-500 mr-3" />
-                    Agendamentos avançados
-                  </li>
-                  <li className="flex items-center">
-                    <CheckIcon className="h-5 w-5 text-green-500 mr-3" />
-                    Sistema de fotos
-                  </li>
-                  <li className="flex items-center">
-                    <CheckIcon className="h-5 w-5 text-green-500 mr-3" />
-                    Relatórios básicos
-                  </li>
-                </ul>
-                
-                <Link href="/register?plan=basic">
-                  <Button className="w-full">
-                    Começar Teste Grátis
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
+            
 
             {/* Plano Premium */}
-            <Card className="group relative p-8 hover:shadow-2xl transition-all duration-500 border-2 border-primary-300 bg-gradient-to-br from-white to-primary-50/30 hover:-translate-y-2">
-              {/* Popular Badge */}
-              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
-                <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-6 py-2 rounded-full text-sm font-bold shadow-lg">
-                  ⭐ Mais Popular
-                </div>
-              </div>
+            <Card className="group relative p-8 hover:shadow-2xl transition-all duration-500 border-2 border-primary-300 bg-gradient-to-br from-white to-primary-50/30 hover:-translate-y-2 text-center">
               
               {/* Glow Effect */}
               <div className="absolute inset-0 bg-gradient-to-br from-primary-500/10 to-primary-600/20 rounded-lg opacity-50 group-hover:opacity-70 transition-opacity duration-500" />
               
               <div className="relative">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl mb-6 shadow-xl">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl mb-6 shadow-xl mx-auto">
                   <StarIcon className="h-8 w-8 text-white" />
                 </div>
                 <CardTitle className="text-3xl mb-2 text-gray-900">Premium</CardTitle>
-                <CardDescription className="mb-4 text-gray-600">Para pet shops estabelecidos</CardDescription>
+                <CardDescription className="mb-4 text-gray-600">Para pet shops em crescimento</CardDescription>
                 <div className="text-4xl font-bold mb-2 text-gray-900">
-                  R$ 99<span className="text-lg font-normal text-gray-600">/mês</span>
+                  R$ 39,90<span className="text-lg font-normal text-gray-600">/mês</span>
                 </div>
                 <p className="text-sm text-primary-600 font-medium mb-8">30 dias grátis para testar</p>
                 
-                <ul className="space-y-4 mb-10">
-                  <li className="flex items-center">
+                <ul className="space-y-4 mb-10 mx-auto text-left">
+                  <li className="flex items-center justify-center">
                     <div className="w-5 h-5 bg-primary-100 rounded-full flex items-center justify-center mr-3">
                       <CheckIcon className="h-3 w-3 text-primary-600" />
                     </div>
-                    <span className="text-gray-700 font-medium">Clientes ilimitados</span>
+                    <span className="text-base text-gray-700 font-medium">Clientes ilimitados</span>
                   </li>
-                  <li className="flex items-center">
+                  <li className="flex items-center justify-center">
                     <div className="w-5 h-5 bg-primary-100 rounded-full flex items-center justify-center mr-3">
                       <CheckIcon className="h-3 w-3 text-primary-600" />
                     </div>
-                    <span className="text-gray-700 font-medium">Pets ilimitados</span>
+                    <span className="text-base text-gray-700 font-medium">Pets ilimitados</span>
                   </li>
-                  <li className="flex items-center">
+                  <li className="flex items-center justify-center">
                     <div className="w-5 h-5 bg-primary-100 rounded-full flex items-center justify-center mr-3">
                       <CheckIcon className="h-3 w-3 text-primary-600" />
                     </div>
-                    <span className="text-gray-700 font-medium">Usuários ilimitados</span>
+                    <span className="text-base text-gray-700 font-medium">Usuários ilimitados</span>
                   </li>
-                  <li className="flex items-center">
+                  <li className="flex items-center justify-center">
                     <div className="w-5 h-5 bg-primary-100 rounded-full flex items-center justify-center mr-3">
                       <CheckIcon className="h-3 w-3 text-primary-600" />
                     </div>
-                    <span className="text-gray-700 font-medium">Todas as funcionalidades</span>
+                    <span className="text-base text-gray-700 font-medium">Todas as funcionalidades avançadas</span>
                   </li>
-                  <li className="flex items-center">
+                  <li className="flex items-center justify-center">
                     <div className="w-5 h-5 bg-primary-100 rounded-full flex items-center justify-center mr-3">
                       <CheckIcon className="h-3 w-3 text-primary-600" />
                     </div>
-                    <span className="text-gray-700 font-medium">Relatórios avançados</span>
+                    <span className="text-base text-gray-700 font-medium">Upload de fotos ilimitado</span>
                   </li>
-                  <li className="flex items-center">
+                  <li className="flex items-center justify-center">
                     <div className="w-5 h-5 bg-primary-100 rounded-full flex items-center justify-center mr-3">
                       <CheckIcon className="h-3 w-3 text-primary-600" />
                     </div>
-                    <span className="text-gray-700 font-medium">Suporte prioritário 24/7</span>
+                    <span className="text-base text-gray-700 font-medium">Relatórios completos</span>
+                  </li>
+                  <li className="flex items-center justify-center">
+                    <div className="w-5 h-5 bg-primary-100 rounded-full flex items-center justify-center mr-3">
+                      <CheckIcon className="h-3 w-3 text-primary-600" />
+                    </div>
+                    <span className="text-base text-gray-700 font-medium">WhatsApp automático</span>
                   </li>
                 </ul>
                 

@@ -1,4 +1,7 @@
-export { AccountManager } from './account-manager'
 export { CategoryManager } from './category-manager'
+export { AccountManager } from './account-manager'
 export { TransactionForm } from './transaction-form'
 export { TransactionList } from './transaction-list'
+export { FinancialCharts, FinancialTrendChart, CategoryExpensesChart, MonthlyComparisonChart } from './financial-charts'
+export { AdvancedMetrics } from './advanced-metrics'
+export { FinancialReports } from './financial-reports'

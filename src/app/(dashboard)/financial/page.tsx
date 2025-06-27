@@ -11,7 +11,10 @@ import {
   BanknotesIcon,
   ArrowTrendingUpIcon,
   ArrowTrendingDownIcon,
-  ScaleIcon
+  ScaleIcon,
+  ChartBarIcon,
+  TagIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline'
 import { toast } from 'react-hot-toast'
 import { clsx } from 'clsx'
@@ -19,8 +22,12 @@ import {
   CategoryManager, 
   AccountManager, 
   TransactionForm, 
-  TransactionList 
+  TransactionList,
+  FinancialCharts,
+  AdvancedMetrics,
+  FinancialReports
 } from '@/components/financial'
+import { useFinancialCharts } from '@/hooks/use-financial-charts'
 
 type FinancialAccount = {
   id: string
@@ -69,6 +76,9 @@ export default function FinancialPage() {
     netProfit: 0
   })
   const supabase = createClient()
+  
+  // Hook para gráficos e métricas avançadas
+  const { monthlyData, categoryData, advancedMetrics, loading: chartsLoading } = useFinancialCharts()
 
   useEffect(() => {
     if (company?.id) {
@@ -149,10 +159,11 @@ export default function FinancialPage() {
   }
 
   const tabs = [
-    { id: 'dashboard', name: 'Dashboard', icon: ArrowTrendingUpIcon },
+    { id: 'dashboard', name: 'Dashboard', icon: ChartBarIcon },
     { id: 'accounts', name: 'Contas', icon: BanknotesIcon },
-    { id: 'categories', name: 'Categorias', icon: ScaleIcon },
+    { id: 'categories', name: 'Categorias', icon: TagIcon },
     { id: 'transactions', name: 'Transações', icon: CurrencyDollarIcon },
+    { id: 'reports', name: 'Relatórios', icon: DocumentTextIcon }
   ] as const
 
   return (
@@ -285,6 +296,16 @@ export default function FinancialPage() {
             </Card>
           </div>
 
+          {/* Métricas Avançadas */}
+          <AdvancedMetrics metrics={advancedMetrics} loading={chartsLoading} />
+
+          {/* Gráficos Financeiros */}
+          <FinancialCharts 
+            monthlyData={monthlyData} 
+            categoryData={categoryData} 
+            loading={chartsLoading} 
+          />
+
           {/* Recent Transactions */}
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
@@ -362,6 +383,11 @@ export default function FinancialPage() {
           showForm={showTransactionForm}
           onFormClose={() => setShowTransactionForm(false)}
         />
+      )}
+
+      {/* Relatórios Financeiros */}
+      {activeTab === 'reports' && (
+        <FinancialReports />
       )}
     </div>
   )

@@ -75,9 +75,9 @@ export default function AppointmentsPage() {
           service:services!inner(
             id,
             name,
-            duration,
+            duration_minutes,
             price,
-            color
+            category
           )
         `)
         .eq('company_id', company!.id)

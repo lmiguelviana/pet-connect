@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/auth-context'
 import { createClient } from '@/lib/supabase'
 import { ChevronDownIcon, HeartIcon } from '@heroicons/react/24/outline'
 import { Avatar } from './avatar'
+import { Badge } from './badge'
 import { Pet } from '@/types/appointments'
 
 interface PetSelectorProps {

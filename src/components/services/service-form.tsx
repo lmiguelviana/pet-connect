@@ -1,13 +1,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ServiceFormProps, ServiceFormData, SERVICE_CATEGORIES, CATEGORY_LABELS, SERVICE_COLORS, WEEKDAYS, WEEKDAY_LABELS } from '@/types/services'
+import { ServiceFormProps, ServiceFormData, SERVICE_CATEGORIES, CATEGORY_LABELS, SERVICE_COLORS, WEEKDAYS, WEEKDAY_LABELS, ServicePhoto } from '@/types/services'
+import { ServicePhotoManager } from './service-photo-manager'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import { useFormWithValidation, serviceSchema } from '@/hooks/use-form-with-validation'
+import { useCRUDToast } from '@/hooks/use-toast'
+import { createClient } from '@/lib/supabase'
 import { 
   Save, 
   X, 
@@ -23,60 +27,89 @@ import {
 } from 'lucide-react'
 
 export function ServiceForm({ service, onSubmit, onCancel, isLoading }: ServiceFormProps) {
-  const [formData, setFormData] = useState<ServiceFormData>({
-    name: service?.name || '',
-    description: service?.description || '',
-    category: service?.category || 'banho',
-    price: service?.price || 0,
-    duration_minutes: service?.duration_minutes || 60,
-    is_active: service?.is_active ?? true,
-    requires_appointment: service?.requires_appointment ?? true,
-    max_pets_per_session: service?.max_pets_per_session || 1,
-    available_days: service?.available_days || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
-    available_hours: service?.available_hours || { start: '08:00', end: '18:00' },
-    color: service?.color || SERVICE_COLORS[0],
-    photos: []
-  })
-
+  const toast = useCRUDToast()
+  
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [previewUrls, setPreviewUrls] = useState<string[]>([])
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [photos, setPhotos] = useState<ServicePhoto[]>([])
+  const [shouldRefreshPhotos, setShouldRefreshPhotos] = useState(0)
 
-  // Validação do formulário
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {}
+  // Função de submissão que será chamada pelo react-hook-form
+  const onSubmitForm = async (data: ServiceFormData) => {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuário não autenticado');
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'Nome é obrigatório'
+      const { data: userData } = await supabase
+        .from('users')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+
+      if (!userData) throw new Error('Dados do usuário não encontrados');
+
+      // Upload das fotos
+      const photoUrls: string[] = [];
+      for (const file of selectedFiles) {
+        const fileName = `${Date.now()}-${file.name}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('service-photos')
+          .upload(`${userData.company_id}/${fileName}`, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('service-photos')
+          .getPublicUrl(uploadData.path);
+
+        photoUrls.push(publicUrl);
+      }
+
+      // Preparar dados do serviço
+      const serviceData = {
+        ...data,
+        company_id: userData.company_id,
+        photos: photoUrls
+      };
+
+      await onSubmit(serviceData);
+      toast.success(service ? 'Serviço atualizado!' : 'Serviço criado!');
+    } catch (error) {
+      console.error('Erro ao salvar serviço:', error);
+      toast.error('Erro ao salvar serviço');
     }
-
-    if (formData.price <= 0) {
-      newErrors.price = 'Preço deve ser maior que zero'
-    }
-
-    if (formData.duration_minutes <= 0) {
-      newErrors.duration_minutes = 'Duração deve ser maior que zero'
-    }
-
-    if (formData.max_pets_per_session <= 0) {
-      newErrors.max_pets_per_session = 'Número de pets deve ser maior que zero'
-    }
-
-    if (formData.available_days.length === 0) {
-      newErrors.available_days = 'Selecione pelo menos um dia'
-    }
-
-    if (!formData.available_hours.start || !formData.available_hours.end) {
-      newErrors.available_hours = 'Horários são obrigatórios'
-    }
-
-    if (formData.available_hours.start >= formData.available_hours.end) {
-      newErrors.available_hours = 'Horário de início deve ser menor que o de fim'
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
   }
+  
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+    reset
+  } = useFormWithValidation<ServiceFormData>({
+    schema: serviceSchema,
+    defaultValues: {
+      name: service?.name || '',
+      description: service?.description || '',
+      category: service?.category || 'banho',
+      price: service?.price || 0,
+      duration_minutes: service?.duration_minutes || 60,
+      is_active: service?.is_active ?? true,
+      requires_appointment: service?.requires_appointment ?? true,
+      max_pets_per_session: service?.max_pets_per_session || 1,
+      available_days: service?.available_days || ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+      available_hours: service?.available_hours || { start: '08:00', end: '18:00' },
+      color: service?.color || SERVICE_COLORS[0],
+      photos: []
+    },
+    onSubmit: onSubmitForm
+  })
+  
+  const formData = watch()
+
+
 
   // Manipular upload de fotos
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -92,7 +125,7 @@ export function ServiceForm({ service, onSubmit, onCancel, isLoading }: ServiceF
     }
 
     setSelectedFiles(prev => [...prev, ...validFiles])
-    setFormData(prev => ({ ...prev, photos: [...(prev.photos || []), ...validFiles] }))
+    setValue('photos', [...(watch('photos') || []), ...validFiles])
 
     // Criar URLs de preview
     validFiles.forEach(file => {
@@ -104,36 +137,16 @@ export function ServiceForm({ service, onSubmit, onCancel, isLoading }: ServiceF
   // Remover foto
   const removePhoto = (index: number) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index))
-    setFormData(prev => ({ 
-      ...prev, 
-      photos: prev.photos?.filter((_, i) => i !== index) || []
-    }))
+    setValue('photos', watch('photos')?.filter((_, i) => i !== index) || [])
     
     // Revogar URL do preview
     URL.revokeObjectURL(previewUrls[index])
     setPreviewUrls(prev => prev.filter((_, i) => i !== index))
   }
 
-  // Manipular dias da semana
-  const toggleDay = (day: string) => {
-    setFormData(prev => ({
-      ...prev,
-      available_days: prev.available_days.includes(day)
-        ? prev.available_days.filter(d => d !== day)
-        : [...prev.available_days, day]
-    }))
-  }
 
-  // Submeter formulário
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!validateForm()) {
-      return
-    }
 
-    await onSubmit(formData)
-  }
+
 
   // Cleanup URLs de preview
   useEffect(() => {
@@ -143,7 +156,7 @@ export function ServiceForm({ service, onSubmit, onCancel, isLoading }: ServiceF
   }, [])
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmitForm)} className="space-y-6">
       {/* Informações Básicas */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -156,20 +169,18 @@ export function ServiceForm({ service, onSubmit, onCancel, isLoading }: ServiceF
             <Label htmlFor="name">Nome do Serviço *</Label>
             <Input
               id="name"
-              value={formData.name}
-              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              {...register('name')}
               placeholder="Ex: Banho e Tosa Completa"
               className={errors.name ? 'border-red-500' : ''}
             />
-            {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+            {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
           </div>
 
           <div className="md:col-span-2">
             <Label htmlFor="description">Descrição</Label>
             <Textarea
               id="description"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              {...register('description')}
               placeholder="Descreva o serviço oferecido..."
               rows={3}
             />
@@ -179,8 +190,7 @@ export function ServiceForm({ service, onSubmit, onCancel, isLoading }: ServiceF
             <Label htmlFor="category">Categoria *</Label>
             <select
               id="category"
-              value={formData.category}
-              onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value as any }))}
+              {...register('category')}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
             >
               {SERVICE_CATEGORIES.map(category => (
@@ -198,9 +208,9 @@ export function ServiceForm({ service, onSubmit, onCancel, isLoading }: ServiceF
                 <button
                   key={color}
                   type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, color }))}
+                  onClick={() => setValue('color', color)}
                   className={`w-8 h-8 rounded-full border-2 transition-all ${
-                    formData.color === color ? 'border-gray-900 scale-110' : 'border-gray-300'
+                    watch('color') === color ? 'border-gray-900 scale-110' : 'border-gray-300'
                   }`}
                   style={{ backgroundColor: color }}
                   title={color}
@@ -226,12 +236,11 @@ export function ServiceForm({ service, onSubmit, onCancel, isLoading }: ServiceF
               type="number"
               step="0.01"
               min="0"
-              value={formData.price}
-              onChange={(e) => setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
+              {...register('price', { valueAsNumber: true })}
               placeholder="0,00"
               className={errors.price ? 'border-red-500' : ''}
             />
-            {errors.price && <p className="text-red-500 text-sm mt-1">{errors.price}</p>}
+            {errors.price && <p className="text-red-500 text-sm mt-1">{errors.price.message}</p>}
           </div>
 
           <div>
@@ -240,12 +249,11 @@ export function ServiceForm({ service, onSubmit, onCancel, isLoading }: ServiceF
               id="duration"
               type="number"
               min="1"
-              value={formData.duration_minutes}
-              onChange={(e) => setFormData(prev => ({ ...prev, duration_minutes: parseInt(e.target.value) || 0 }))}
+              {...register('duration_minutes', { valueAsNumber: true })}
               placeholder="60"
               className={errors.duration_minutes ? 'border-red-500' : ''}
             />
-            {errors.duration_minutes && <p className="text-red-500 text-sm mt-1">{errors.duration_minutes}</p>}
+            {errors.duration_minutes && <p className="text-red-500 text-sm mt-1">{errors.duration_minutes.message}</p>}
           </div>
 
           <div>
@@ -254,12 +262,11 @@ export function ServiceForm({ service, onSubmit, onCancel, isLoading }: ServiceF
               id="max_pets"
               type="number"
               min="1"
-              value={formData.max_pets_per_session}
-              onChange={(e) => setFormData(prev => ({ ...prev, max_pets_per_session: parseInt(e.target.value) || 0 }))}
+              {...register('max_pets_per_session', { valueAsNumber: true })}
               placeholder="1"
               className={errors.max_pets_per_session ? 'border-red-500' : ''}
             />
-            {errors.max_pets_per_session && <p className="text-red-500 text-sm mt-1">{errors.max_pets_per_session}</p>}
+            {errors.max_pets_per_session && <p className="text-red-500 text-sm mt-1">{errors.max_pets_per_session.message}</p>}
           </div>
         </div>
       </Card>
@@ -279,9 +286,15 @@ export function ServiceForm({ service, onSubmit, onCancel, isLoading }: ServiceF
                 <button
                   key={day}
                   type="button"
-                  onClick={() => toggleDay(day)}
+                  onClick={() => {
+                    const currentDays = watch('available_days') || [];
+                    const newDays = currentDays.includes(day)
+                      ? currentDays.filter(d => d !== day)
+                      : [...currentDays, day];
+                    setValue('available_days', newDays);
+                  }}
                   className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
-                    formData.available_days.includes(day)
+                    (watch('available_days') || []).includes(day)
                       ? 'bg-green-100 border-green-300 text-green-800'
                       : 'bg-gray-50 border-gray-300 text-gray-700 hover:bg-gray-100'
                   }`}
@@ -290,7 +303,7 @@ export function ServiceForm({ service, onSubmit, onCancel, isLoading }: ServiceF
                 </button>
               ))}
             </div>
-            {errors.available_days && <p className="text-red-500 text-sm mt-1">{errors.available_days}</p>}
+            {errors.available_days && <p className="text-red-500 text-sm mt-1">{errors.available_days.message}</p>}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -299,11 +312,7 @@ export function ServiceForm({ service, onSubmit, onCancel, isLoading }: ServiceF
               <Input
                 id="start_time"
                 type="time"
-                value={formData.available_hours.start}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  available_hours: { ...prev.available_hours, start: e.target.value }
-                }))}
+                {...register('available_hours.start')}
                 className={errors.available_hours ? 'border-red-500' : ''}
               />
             </div>
@@ -313,16 +322,12 @@ export function ServiceForm({ service, onSubmit, onCancel, isLoading }: ServiceF
               <Input
                 id="end_time"
                 type="time"
-                value={formData.available_hours.end}
-                onChange={(e) => setFormData(prev => ({
-                  ...prev,
-                  available_hours: { ...prev.available_hours, end: e.target.value }
-                }))}
+                {...register('available_hours.end')}
                 className={errors.available_hours ? 'border-red-500' : ''}
               />
             </div>
           </div>
-          {errors.available_hours && <p className="text-red-500 text-sm mt-1">{errors.available_hours}</p>}
+          {errors.available_hours && <p className="text-red-500 text-sm mt-1">{errors.available_hours.message}</p>}
         </div>
       </Card>
 
@@ -338,8 +343,7 @@ export function ServiceForm({ service, onSubmit, onCancel, isLoading }: ServiceF
             <input
               type="checkbox"
               id="is_active"
-              checked={formData.is_active}
-              onChange={(e) => setFormData(prev => ({ ...prev, is_active: e.target.checked }))}
+              {...register('is_active')}
               className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
             />
             <Label htmlFor="is_active" className="cursor-pointer">
@@ -351,8 +355,7 @@ export function ServiceForm({ service, onSubmit, onCancel, isLoading }: ServiceF
             <input
               type="checkbox"
               id="requires_appointment"
-              checked={formData.requires_appointment}
-              onChange={(e) => setFormData(prev => ({ ...prev, requires_appointment: e.target.checked }))}
+              {...register('requires_appointment')}
               className="w-4 h-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
             />
             <Label htmlFor="requires_appointment" className="cursor-pointer">
@@ -362,68 +365,80 @@ export function ServiceForm({ service, onSubmit, onCancel, isLoading }: ServiceF
         </div>
       </Card>
 
-      {/* Upload de Fotos */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <ImageIcon className="h-5 w-5" />
-          Fotos do Serviço
-        </h3>
-        
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="photos">Adicionar Fotos</Label>
-            <div className="mt-2">
-              <input
-                type="file"
-                id="photos"
-                multiple
-                accept="image/*"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => document.getElementById('photos')?.click()}
-                className="flex items-center gap-2"
-              >
-                <Upload className="h-4 w-4" />
-                Selecionar Fotos
-              </Button>
-              <p className="text-sm text-gray-600 mt-1">
-                Máximo 5MB por foto. Formatos: JPG, PNG, WebP
-              </p>
-            </div>
-          </div>
+      {/* Sistema de Fotos */}
+      {service?.id && (
+        <ServicePhotoManager
+          serviceId={service.id}
+          photos={photos}
+          onPhotosUpdate={() => setShouldRefreshPhotos(prev => prev + 1)}
+          maxPhotos={10}
+        />
+      )}
 
-          {/* Preview das Fotos */}
-          {previewUrls.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {previewUrls.map((url, index) => (
-                <div key={index} className="relative group">
-                  <img
-                    src={url}
-                    alt={`Preview ${index + 1}`}
-                    className="w-full h-24 object-cover rounded-lg border"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removePhoto(index)}
-                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                  {index === 0 && (
-                    <Badge className="absolute bottom-1 left-1 text-xs">
-                      Principal
-                    </Badge>
-                  )}
-                </div>
-              ))}
+      {/* Upload de Fotos (apenas para novos serviços) */}
+      {!service?.id && (
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <ImageIcon className="h-5 w-5" />
+            Fotos do Serviço
+          </h3>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="photos">Adicionar Fotos</Label>
+              <div className="mt-2">
+                <input
+                  type="file"
+                  id="photos"
+                  multiple
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById('photos')?.click()}
+                  className="flex items-center gap-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  Selecionar Fotos
+                </Button>
+                <p className="text-sm text-gray-600 mt-1">
+                  Máximo 5MB por foto. Formatos: JPG, PNG, WebP
+                </p>
+              </div>
             </div>
-          )}
-        </div>
-      </Card>
+
+            {/* Preview das Fotos */}
+            {previewUrls.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {previewUrls.map((url, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={url}
+                      alt={`Preview ${index + 1}`}
+                      className="w-full h-24 object-cover rounded-lg border"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(index)}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                    {index === 0 && (
+                      <Badge className="absolute bottom-1 left-1 text-xs">
+                        Principal
+                      </Badge>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* Ações */}
       <div className="flex items-center justify-end gap-3">
@@ -445,7 +460,7 @@ export function ServiceForm({ service, onSubmit, onCancel, isLoading }: ServiceF
           ) : (
             <Save className="h-4 w-4" />
           )}
-          {service ? 'Atualizar Serviço' : 'Criar Serviço'}
+          {isLoading ? 'Salvando...' : service ? 'Atualizar Serviço' : 'Criar Serviço'}
         </Button>
       </div>
     </form>

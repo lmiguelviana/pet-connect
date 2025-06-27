@@ -1,5 +1,23 @@
 // Types para o módulo de Serviços
 
+export interface AvailableHours {
+  [day: string]: {
+    start: string // "09:00"
+    end: string   // "18:00"
+    breaks?: Array<{
+      start: string
+      end: string
+    }>
+  }
+}
+
+export interface PackageServiceRaw {
+  id: string
+  service_id: string
+  quantity: number
+  service: Service
+}
+
 export interface Service {
   id: string
   company_id: string
@@ -11,12 +29,8 @@ export interface Service {
   is_active: boolean
   requires_appointment: boolean
   max_pets_per_session: number
-  available_days: string[] // ['monday', 'tuesday', ...]
-  available_hours: {
-    start: string // '08:00'
-    end: string   // '18:00'
-  }
-  color?: string
+  available_days: number[] // [1,2,3,4,5,6,7] - 1=Monday, 7=Sunday
+  available_hours: AvailableHours // JSONB field from database
   created_at: string
   updated_at: string
 }
@@ -30,6 +44,35 @@ export interface ServicePhoto {
   caption?: string
   created_at: string
   updated_at: string
+}
+
+export interface ServiceWithPhotos extends Service {
+  photos: ServicePhoto[]
+  primary_photo?: ServicePhoto
+}
+
+export interface ServicePackage {
+  id?: string
+  company_id: string
+  name: string
+  description: string
+  services: PackageService[]
+  discount_type: 'percentage' | 'fixed'
+  discount_value: number
+  total_price: number
+  final_price: number
+  is_active: boolean
+  valid_until?: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface PackageService {
+  service_id: string
+  service: Service
+  quantity: number
+  unit_price: number
+  total_price: number
 }
 
 export interface ServiceWithPhotos extends Service {
@@ -154,13 +197,7 @@ export interface ServiceFormData {
 }
 
 // Props para componentes
-export interface ServiceCardProps {
-  service: ServiceWithPhotos
-  onEdit?: (service: Service) => void
-  onDelete?: (service: Service) => void
-  onDuplicate?: (service: Service) => void
-  onToggleStatus?: (service: Service) => void
-}
+
 
 export interface ServiceFormProps {
   service?: Service

@@ -18,6 +18,7 @@ import {
   XMarkIcon,
   Bars3Icon,
 } from '@heroicons/react/24/outline'
+import { NavigationItem, SidebarContentProps } from '@/types/navigation'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon, feature: 'basic_dashboard' },
@@ -82,7 +83,7 @@ export function Sidebar() {
   )
 }
 
-function SidebarContent({ navigation, pathname, checkFeature, isPremium, company }: any) {
+function SidebarContent({ navigation, pathname, checkFeature, isPremium, company }: SidebarContentProps) {
   return (
     <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white px-6 pb-4 border-r border-gray-200">
       {/* Logo */}
@@ -103,7 +104,7 @@ function SidebarContent({ navigation, pathname, checkFeature, isPremium, company
         <ul role="list" className="flex flex-1 flex-col gap-y-7">
           <li>
             <ul role="list" className="-mx-2 space-y-1">
-              {navigation.map((item: any) => {
+              {navigation.map((item: NavigationItem) => {
                 const isActive = pathname === item.href
                 const hasAccess = checkFeature(item.feature)
                 const needsUpgrade = item.premium && !isPremium

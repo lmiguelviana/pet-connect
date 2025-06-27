@@ -1,6 +1,6 @@
 'use client'
 
-import { ServiceCardProps, CATEGORY_LABELS } from '@/types/services'
+import { ServiceWithPhotos, CATEGORY_LABELS } from '@/types/services'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -18,6 +18,14 @@ import {
 } from 'lucide-react'
 import Image from 'next/image'
 
+interface ServiceCardProps {
+  service: ServiceWithPhotos
+  onEdit: (serviceId: string) => void
+  onDelete: (serviceId: string) => void
+  onDuplicate: (serviceId: string) => void
+  onToggleStatus: (serviceId: string) => void
+}
+
 export function ServiceCard({ 
   service, 
   onEdit, 
@@ -25,6 +33,7 @@ export function ServiceCard({
   onDuplicate, 
   onToggleStatus 
 }: ServiceCardProps) {
+  const primaryPhoto = service.primary_photo || service.photos?.[0]
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -42,21 +51,21 @@ export function ServiceCard({
     return `${mins}min`
   }
 
-  const formatAvailableDays = (days: string[]) => {
-    const dayLabels: Record<string, string> = {
-      monday: 'Seg',
-      tuesday: 'Ter',
-      wednesday: 'Qua',
-      thursday: 'Qui',
-      friday: 'Sex',
-      saturday: 'Sáb',
-      sunday: 'Dom'
+  const formatAvailableDays = (days: number[]) => {
+    const dayLabels: Record<number, string> = {
+      1: 'Seg',
+      2: 'Ter',
+      3: 'Qua',
+      4: 'Qui',
+      5: 'Sex',
+      6: 'Sáb',
+      7: 'Dom'
     }
     
     return days.map(day => dayLabels[day] || day).join(', ')
   }
 
-  const primaryPhoto = service.primary_photo || service.photos?.[0]
+
 
   return (
     <Card className={`p-6 transition-all hover:shadow-md ${
@@ -81,8 +90,7 @@ export function ServiceCard({
             </div>
           ) : (
             <div 
-              className="w-20 h-20 rounded-lg flex items-center justify-center"
-              style={{ backgroundColor: service.color || '#10B981' }}
+              className="w-20 h-20 rounded-lg flex items-center justify-center bg-green-600"
             >
               <ImageIcon className="h-8 w-8 text-white" />
             </div>
@@ -99,11 +107,7 @@ export function ServiceCard({
               <div className="flex items-center gap-2 mt-1">
                 <Badge 
                   variant="outline" 
-                  className="text-xs"
-                  style={{ 
-                    borderColor: service.color || '#10B981',
-                    color: service.color || '#10B981'
-                  }}
+                  className="text-xs text-green-600 border-green-600"
                 >
                   {CATEGORY_LABELS[service.category as keyof typeof CATEGORY_LABELS] || service.category}
                 </Badge>
@@ -145,7 +149,10 @@ export function ServiceCard({
             <div className="flex items-center gap-1">
               <Clock className="h-4 w-4" />
               <span>
-                {service.available_hours.start} às {service.available_hours.end}
+                {service.available_hours?.start && service.available_hours?.end 
+                  ? `${service.available_hours.start} às ${service.available_hours.end}`
+                  : 'Horário não definido'
+                }
               </span>
             </div>
           </div>
@@ -164,7 +171,7 @@ export function ServiceCard({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onToggleStatus?.(service)}
+              onClick={() => onToggleStatus?.(service.id)}
               className="h-8 w-8 p-0"
               title={service.is_active ? 'Desativar serviço' : 'Ativar serviço'}
             >
@@ -177,7 +184,7 @@ export function ServiceCard({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onEdit?.(service)}
+              onClick={() => onEdit?.(service.id)}
               className="h-8 w-8 p-0"
               title="Editar serviço"
             >
@@ -186,7 +193,7 @@ export function ServiceCard({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onDuplicate?.(service)}
+              onClick={() => onDuplicate?.(service.id)}
               className="h-8 w-8 p-0"
               title="Duplicar serviço"
             >
@@ -195,7 +202,7 @@ export function ServiceCard({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onDelete?.(service)}
+              onClick={() => onDelete?.(service.id)}
               className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
               title="Excluir serviço"
             >

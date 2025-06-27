@@ -16,6 +16,8 @@ Execute os scripts SQL na seguinte ordem no **SQL Editor** do Supabase Dashboard
 04-pets-table.sql          # Pets
 05-pet-photos-table.sql    # Fotos dos Pets
 06-services-table.sql      # Serviços
+06b-service-photos-table.sql # Fotos dos Serviços
+06c-service-packages-table.sql # Pacotes de Serviços
 07-appointments-table.sql  # Agendamentos
 08-transactions-table.sql  # Transações Financeiras
 09-notifications-table.sql # Notificações

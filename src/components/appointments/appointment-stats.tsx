@@ -38,8 +38,8 @@ export function AppointmentStats({ appointments, loading }: AppointmentStatsProp
   }
 
   const today = new Date()
-  const todayAppointments = appointments.filter(apt => isToday(new Date(apt.date)))
-  const tomorrowAppointments = appointments.filter(apt => isTomorrow(new Date(apt.date)))
+  const todayAppointments = appointments.filter(apt => isToday(new Date(apt.date_time)))
+  const tomorrowAppointments = appointments.filter(apt => isTomorrow(new Date(apt.date_time)))
   const completedAppointments = appointments.filter(apt => apt.status === 'completed')
   const cancelledAppointments = appointments.filter(apt => apt.status === 'cancelled')
   const totalRevenue = completedAppointments.reduce((sum, apt) => sum + (apt.total_amount || 0), 0)

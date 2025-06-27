@@ -17,7 +17,8 @@ import { z } from 'zod'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { format, addMinutes, parseISO } from 'date-fns'
-import { AppointmentFormData } from '@/types/appointments'
+import { Service } from '@/types/services'
+import { AppointmentFormData, AppointmentFormDataUnified } from '@/types/appointments'
 
 const appointmentSchema = z.object({
   client_id: z.string().min(1, 'Selecione um cliente'),
@@ -53,7 +54,7 @@ export function AppointmentForm({
   const router = useRouter()
   const { company } = useAuth()
   const [loading, setLoading] = useState(false)
-  const [selectedService, setSelectedService] = useState<any>(null)
+  const [selectedService, setSelectedService] = useState<Service | null>(null)
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
   const supabase = createClient()
 
@@ -166,11 +167,6 @@ export function AppointmentForm({
         toast.error('Selecione um serviço válido')
         return
       }
-
-      // Calcular horário de término
-      const startTime = parseISO(`2000-01-01T${data.start_time}:00`)
-      const endTime = addMinutes(startTime, selectedService.duration)
-      const endTimeString = format(endTime, 'HH:mm')
 
       // Combinar data e hora em date_time
       const dateTime = new Date(`${data.date}T${data.start_time}:00`)

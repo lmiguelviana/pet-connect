@@ -17,8 +17,8 @@ import {
 } from 'lucide-react'
 
 interface ServiceFiltersProps {
-  filters: ServiceFiltersType
-  onFiltersChange: (filters: ServiceFiltersType) => void
+  filters: ServiceFilters
+  onFiltersChange: (filters: ServiceFilters) => void
   stats: ServiceStats
 }
 
@@ -76,8 +76,8 @@ export function ServiceFilters({ filters, onFiltersChange, stats }: ServiceFilte
   const categoriesWithCount = SERVICE_CATEGORIES.map(category => ({
     value: category,
     label: CATEGORY_LABELS[category],
-    count: stats.by_category[category] || 0
-  })).filter(cat => cat.count > 0)
+    count: 0 // TODO: Implementar contagem de estatísticas
+  }))
 
   return (
     <Card className="p-6">

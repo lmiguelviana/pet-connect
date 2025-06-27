@@ -1,23 +1,58 @@
 'use client'
 
-import { ServiceWithPhotos, ServiceFilters, ServiceListProps } from '@/types/services'
+import { useEffect } from 'react'
 import { ServiceCard } from './service-card'
+import { ServiceFilters } from '@/types/services'
+import { useServices } from '@/hooks/use-services'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Search } from 'lucide-react'
+import { Plus, Search, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
-export function ServiceList({
-  services,
-  filters,
-  onFiltersChange,
-  onEdit,
-  onDelete,
-  onDuplicate,
-  onToggleStatus,
-  isLoading
-}: ServiceListProps) {
+interface ServiceListProps {
+  filters?: ServiceFilters
+  onServiceUpdate?: () => void
+}
+
+export function ServiceList({ filters, onServiceUpdate }: ServiceListProps) {
   const router = useRouter()
+  const { 
+    services, 
+    isLoading, 
+    error, 
+    loadServices, 
+    deleteService 
+  } = useServices({ 
+    autoLoad: true, 
+    filters 
+  })
+
+  // Recarregar quando filtros mudarem
+  useEffect(() => {
+    loadServices(filters)
+  }, [filters, loadServices])
+
+  const handleEdit = (serviceId: string) => {
+    router.push(`/services/${serviceId}/edit`)
+  }
+
+  const handleDelete = async (serviceId: string) => {
+    try {
+      await deleteService(serviceId)
+      onServiceUpdate?.()
+    } catch (error) {
+      console.error('Erro ao deletar serviço:', error)
+    }
+  }
+
+  const handleDuplicate = (serviceId: string) => {
+    router.push(`/services/${serviceId}/duplicate`)
+  }
+
+  const handleToggleStatus = async (serviceId: string) => {
+    // Implementar toggle de status
+    console.log('Toggle status:', serviceId)
+  }
 
   if (isLoading) {
     return (
@@ -45,8 +80,8 @@ export function ServiceList({
   }
 
   if (services.length === 0) {
-    const hasFilters = filters.search || filters.category !== 'all' || filters.status !== 'all' || 
-      filters.price_range.min > 0 || filters.price_range.max < 1000
+    const hasFilters = filters?.search || filters?.category !== 'all' || filters?.status !== 'all' || 
+      (filters?.price_range && (filters.price_range.min > 0 || filters.price_range.max < 1000))
 
     return (
       <Card className="p-8">
@@ -65,12 +100,7 @@ export function ServiceList({
                 </p>
                 <Button
                   variant="outline"
-                  onClick={() => onFiltersChange({
-                    search: '',
-                    category: 'all',
-                    status: 'all',
-                    price_range: { min: 0, max: 1000 }
-                  })}
+                  onClick={() => loadServices()}
                 >
                   Limpar Filtros
                 </Button>
@@ -108,7 +138,7 @@ export function ServiceList({
           <h2 className="text-lg font-semibold text-gray-900">
             {services.length} {services.length === 1 ? 'serviço encontrado' : 'serviços encontrados'}
           </h2>
-          {(filters.search || filters.category !== 'all' || filters.status !== 'all') && (
+          {(filters?.search || filters?.category !== 'all' || filters?.status !== 'all') && (
             <p className="text-sm text-gray-600">
               Resultados filtrados
             </p>
@@ -130,10 +160,10 @@ export function ServiceList({
           <ServiceCard
             key={service.id}
             service={service}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            onDuplicate={onDuplicate}
-            onToggleStatus={onToggleStatus}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onDuplicate={handleDuplicate}
+            onToggleStatus={handleToggleStatus}
           />
         ))}
       </div>

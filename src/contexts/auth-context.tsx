@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from 'react'
 import { User } from '@supabase/auth-helpers-nextjs'
 import { createClient } from '@/lib/supabase'
 import { Company, User as AppUser } from '@/types'
+import { CompanySignUpData } from '@/types/auth'
 
 interface AuthContextType {
   user: User | null
@@ -11,7 +12,7 @@ interface AuthContextType {
   company: Company | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error?: string }>
-  signUp: (email: string, password: string, companyData: any) => Promise<{ error?: string }>
+  signUp: (email: string, password: string, companyData: CompanySignUpData) => Promise<{ error?: string }>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error?: string }>
 }
@@ -110,7 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const signUp = async (email: string, password: string, companyData: any) => {
+  const signUp = async (email: string, password: string, companyData: CompanySignUpData) => {
     try {
       // 1. Criar usuário no Supabase Auth
       const { data, error: authError } = await supabase.auth.signUp({

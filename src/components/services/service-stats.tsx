@@ -1,8 +1,8 @@
 'use client'
 
-import { ServiceStats as ServiceStatsType } from '@/types/services'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { useServices } from '@/hooks/use-services'
 import { 
   Activity, 
   DollarSign, 
@@ -13,10 +13,30 @@ import {
 } from 'lucide-react'
 
 interface ServiceStatsProps {
-  stats: ServiceStatsType
+  className?: string
 }
 
-export function ServiceStats({ stats }: ServiceStatsProps) {
+export function ServiceStats({ className }: ServiceStatsProps) {
+  const { stats, isLoading } = useServices({ autoLoad: true })
+
+  if (isLoading) {
+    return (
+      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 ${className || ''}`}>
+        {[...Array(4)].map((_, i) => (
+          <Card key={i} className="p-6">
+            <div className="animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+              <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    )
+  }
+
+  if (!stats) {
+    return null
+  }
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',

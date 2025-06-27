@@ -68,17 +68,17 @@ export function StatsCards() {
         .gte('date_time', startOfMonth.toISOString())
         .lte('date_time', endOfMonth.toISOString())
 
-      // Buscar receita do mês (simulada por enquanto)
+      // Buscar receita do mês
       const { data: appointmentsData } = await supabase
         .from('appointments')
-        .select('price')
+        .select('total_amount')
         .eq('company_id', company?.id)
         .eq('status', 'completed')
         .gte('date_time', startOfMonth.toISOString())
         .lte('date_time', endOfMonth.toISOString())
 
       const monthlyRevenue = appointmentsData?.reduce((sum, appointment) => {
-        return sum + (appointment.price || 0)
+        return sum + (appointment.total_amount || 0)
       }, 0) || 0
 
       setStats({

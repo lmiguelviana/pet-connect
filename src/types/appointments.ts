@@ -29,9 +29,8 @@ export interface Appointment {
   service: {
     id: string
     name: string
-    duration: number
+    duration_minutes: number
     price: number
-    color: string
     category?: string
   }
   notifications?: {
@@ -73,8 +72,7 @@ export interface Service {
   description?: string
   category: string
   price: number
-  duration: number
-  color?: string
+  duration_minutes: number
 }
 
 export interface AppointmentFormData {
@@ -84,6 +82,18 @@ export interface AppointmentFormData {
   service_id: string
   date: string
   start_time: string
+  notes?: string
+  send_notification: boolean
+}
+
+// Interface para dados do formulário com date_time unificado
+export interface AppointmentFormDataUnified {
+  id?: string
+  client_id: string
+  pet_id?: string
+  service_id: string
+  date_time: string
+  duration_minutes: number
   notes?: string
   send_notification: boolean
 }

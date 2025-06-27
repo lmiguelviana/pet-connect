@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
           is_primary
         ),
         _count:appointments(count)
-      `)
+      `, { count: 'exact' })
       .eq('company_id', userData.company_id)
 
     // Filtros
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
     }
 
-    // Calcular estatísticas
+    // Buscar estatísticas detalhadas
     const { data: stats } = await supabase
       .from('services')
       .select('category, is_active, price, duration')
@@ -127,7 +127,6 @@ export async function GET(request: NextRequest) {
         totalPages: Math.ceil((count || 0) / limit)
       }
     })
-
   } catch (error) {
     console.error('Erro na API de serviços:', error)
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
@@ -156,8 +155,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Usuário não associado a uma empresa' }, { status: 400 })
     }
 
-    // Validar dados
     const body = await request.json()
+    
+    // Validar dados
     const validatedData = createServiceSchema.parse(body)
 
     // Criar serviço
@@ -165,7 +165,8 @@ export async function POST(request: NextRequest) {
       .from('services')
       .insert({
         ...validatedData,
-        company_id: userData.company_id
+        company_id: userData.company_id,
+        created_by: user.id
       })
       .select()
       .single()
@@ -176,7 +177,6 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ service }, { status: 201 })
-
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ 
@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
         details: error.errors 
       }, { status: 400 })
     }
-
+    
     console.error('Erro na API de serviços:', error)
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }

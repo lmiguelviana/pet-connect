@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createClient } from '@/lib/supabase'
 import { z } from 'zod'
 
 const createPackageSchema = z.object({
@@ -22,7 +22,7 @@ const createPackageSchema = z.object({
 // GET - Listar pacotes
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerSupabaseClient()
+    const supabase = createClient()
     
     // Verificar autenticação
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -31,13 +31,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Buscar empresa do usuário
-    const { data: userData } = await supabase
+    const { data: userData, error: userError } = await supabase
       .from('users')
       .select('company_id')
       .eq('id', user.id)
       .single()
 
-    if (!userData?.company_id) {
+    if (userError || !userData?.company_id) {
       return NextResponse.json({ error: 'Empresa não encontrada' }, { status: 404 })
     }
 
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
 
     // Filtros
     if (search) {
-      query = query.ilike('name', `%${search}%`)
+      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`)
     }
 
     if (status && status !== 'all') {
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
       })) || []
     })) || []
 
-    // Estatísticas
+    // Estatísticas detalhadas
     const { data: stats } = await supabase
       .from('service_packages')
       .select('is_active, final_price')
@@ -117,15 +117,14 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       packages: transformedPackages,
+      stats: statistics,
       pagination: {
         page,
         limit,
         total: count || 0,
-        pages: Math.ceil((count || 0) / limit)
-      },
-      statistics
+        totalPages: Math.ceil((count || 0) / limit)
+      }
     })
-
   } catch (error) {
     console.error('Erro na API de pacotes:', error)
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
@@ -135,7 +134,7 @@ export async function GET(request: NextRequest) {
 // POST - Criar pacote
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerSupabaseClient()
+    const supabase = createClient()
     
     // Verificar autenticação
     const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -144,44 +143,50 @@ export async function POST(request: NextRequest) {
     }
 
     // Buscar empresa do usuário
-    const { data: userData } = await supabase
+    const { data: userData, error: userError } = await supabase
       .from('users')
       .select('company_id')
       .eq('id', user.id)
       .single()
 
-    if (!userData?.company_id) {
+    if (userError || !userData?.company_id) {
       return NextResponse.json({ error: 'Empresa não encontrada' }, { status: 404 })
     }
 
     const body = await request.json()
     const validatedData = createPackageSchema.parse(body)
+    const { service_ids, ...packageData } = validatedData
 
-    // Verificar se os serviços pertencem à empresa
-    const serviceIds = validatedData.services.map(s => s.service_id)
+    // Verificar se os serviços existem e pertencem à empresa
     const { data: services, error: servicesError } = await supabase
       .from('services')
-      .select('id')
+      .select('id, price')
       .eq('company_id', userData.company_id)
-      .in('id', serviceIds)
+      .in('id', service_ids)
 
-    if (servicesError || services?.length !== serviceIds.length) {
-      return NextResponse.json({ error: 'Serviços inválidos' }, { status: 400 })
+    if (servicesError || !services || services.length !== service_ids.length) {
+      return NextResponse.json({ error: 'Um ou mais serviços não foram encontrados' }, { status: 400 })
+    }
+
+    // Calcular preço total dos serviços
+    const totalServicesPrice = services.reduce((sum, service) => sum + service.price, 0)
+    
+    // Se não foi fornecido um preço, calcular com desconto
+    let finalPrice = packageData.price
+    if (!finalPrice && packageData.discount_percentage) {
+      finalPrice = totalServicesPrice * (1 - packageData.discount_percentage / 100)
+    } else if (!finalPrice) {
+      finalPrice = totalServicesPrice
     }
 
     // Criar pacote
-    const { data: packageData, error: packageError } = await supabase
+    const { data: servicePackage, error: packageError } = await supabase
       .from('service_packages')
       .insert({
+        ...packageData,
+        price: finalPrice,
         company_id: userData.company_id,
-        name: validatedData.name,
-        description: validatedData.description,
-        discount_type: validatedData.discount_type,
-        discount_value: validatedData.discount_value,
-        total_price: validatedData.total_price,
-        final_price: validatedData.final_price,
-        is_active: validatedData.is_active,
-        valid_until: validatedData.valid_until
+        created_by: user.id
       })
       .select()
       .single()
@@ -192,12 +197,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Criar relações com serviços
-    const packageServices = validatedData.services.map(service => ({
-      package_id: packageData.id,
-      service_id: service.service_id,
-      quantity: service.quantity,
-      unit_price: service.unit_price,
-      total_price: service.total_price
+    const packageServices = service_ids.map(serviceId => ({
+      package_id: servicePackage.id,
+      service_id: serviceId
     }))
 
     const { error: servicesRelationError } = await supabase
@@ -207,12 +209,49 @@ export async function POST(request: NextRequest) {
     if (servicesRelationError) {
       console.error('Erro ao criar relações de serviços:', servicesRelationError)
       // Reverter criação do pacote
-      await supabase.from('service_packages').delete().eq('id', packageData.id)
+      await supabase.from('service_packages').delete().eq('id', servicePackage.id)
       return NextResponse.json({ error: 'Erro ao criar pacote' }, { status: 500 })
     }
 
-    return NextResponse.json({ package: packageData }, { status: 201 })
+    // Criar itens do pacote
+    const packageItems = service_ids.map(serviceId => ({
+      service_package_id: servicePackage.id,
+      service_id: serviceId
+    }))
 
+    const { error: itemsError } = await supabase
+      .from('service_package_items')
+      .insert(packageItems)
+
+    if (itemsError) {
+      console.error('Erro ao criar itens do pacote:', itemsError)
+      // Reverter criação do pacote
+      await supabase
+        .from('service_packages')
+        .delete()
+        .eq('id', servicePackage.id)
+      
+      return NextResponse.json({ error: 'Erro ao criar itens do pacote' }, { status: 500 })
+    }
+
+    // Buscar pacote completo com serviços
+    const { data: completePackage } = await supabase
+      .from('service_packages')
+      .select(`
+        *,
+        service_package_items (
+          service_id,
+          services (
+            id,
+            name,
+            price
+          )
+        )
+      `)
+      .eq('id', servicePackage.id)
+      .single()
+
+    return NextResponse.json({ package: completePackage }, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ 
@@ -220,7 +259,7 @@ export async function POST(request: NextRequest) {
         details: error.errors 
       }, { status: 400 })
     }
-
+    
     console.error('Erro na API de pacotes:', error)
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }

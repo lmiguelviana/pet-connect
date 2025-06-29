@@ -1,98 +1,94 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/auth-context'
-import { createClient } from '@/lib/supabase'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { ClientSelector } from '@/components/ui/client-selector'
-import { PetSelector } from '@/components/ui/pet-selector'
-import { ServiceSelector } from '@/components/ui/service-selector'
-import { TimeSlotPicker } from '@/components/ui/time-slot-picker'
-import { toast } from 'react-hot-toast'
-import { z } from 'zod'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { format, addMinutes, parseISO } from 'date-fns'
-import { Service } from '@/types/services'
-import { AppointmentFormData, AppointmentFormDataUnified } from '@/types/appointments'
-
-const appointmentSchema = z.object({
-  client_id: z.string().min(1, 'Selecione um cliente'),
-  pet_id: z.string().optional(),
-  service_id: z.string().min(1, 'Selecione um serviço'),
-  date: z.string().min(1, 'Selecione uma data'),
-  start_time: z.string().min(1, 'Selecione um horário'),
-  notes: z.string().optional(),
-  send_notification: z.boolean().default(true)
-})
-
-type AppointmentFormData = z.infer<typeof appointmentSchema>
+import { useState, useEffect } from 'react';
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { z } from 'zod';
+import { ClientSelector } from '@/components/ui/client-selector';
+import { PetSelector } from '@/components/ui/pet-selector';
+import { ServiceSelector } from '@/components/ui/service-selector';
+import { Client, Pet, Service, AppointmentFormData } from '@/types/appointments';
+import { formatCurrency } from '@/lib/utils';
 
 interface AppointmentFormProps {
-  initialData?: Partial<AppointmentFormData & { id: string }>
-  isEditing?: boolean
-  preSelectedClientId?: string | null
-  preSelectedPetId?: string | null
-  preSelectedServiceId?: string | null
-  preSelectedDate?: string | null
-  preSelectedTime?: string | null
+  appointment?: AppointmentFormData;
+  onSubmit: (data: AppointmentFormData) => Promise<void>;
+  onCancel: () => void;
+  loading?: boolean;
 }
 
-export function AppointmentForm({
-  initialData,
-  isEditing = false,
-  preSelectedClientId,
-  preSelectedPetId,
-  preSelectedServiceId,
-  preSelectedDate,
-  preSelectedTime
-}: AppointmentFormProps) {
-  const router = useRouter()
-  const { company } = useAuth()
-  const [loading, setLoading] = useState(false)
-  const [selectedService, setSelectedService] = useState<Service | null>(null)
-  const [availableSlots, setAvailableSlots] = useState<string[]>([])
-  const supabase = createClient()
+const appointmentSchema = z.object({
+  client_id: z.string().min(1, 'Cliente é obrigatório'),
+  pet_id: z.string().min(1, 'Pet é obrigatório'),
+  service_id: z.string().min(1, 'Serviço é obrigatório'),
+  appointment_date: z.string().min(1, 'Data é obrigatória'),
+  appointment_time: z.string().min(1, 'Horário é obrigatório'),
+  notes: z.string().optional(),
+  status: z.enum(['scheduled', 'confirmed', 'in_progress', 'completed', 'cancelled']).default('scheduled')
+});
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setValue,
-    watch,
-  } = useForm<AppointmentFormData>({
-    resolver: zodResolver(appointmentSchema),
-    defaultValues: {
-      client_id: preSelectedClientId || initialData?.client_id || '',
-      pet_id: preSelectedPetId || initialData?.pet_id || '',
-      service_id: preSelectedServiceId || initialData?.service_id || '',
-      date: preSelectedDate || initialData?.date || '',
-      start_time: preSelectedTime || initialData?.start_time || '',
-      notes: initialData?.notes || '',
-      send_notification: true,
-    },
-  })
+export function AppointmentForm({ appointment, onSubmit, onCancel, loading = false }: AppointmentFormProps) {
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [formData, setFormData] = useState({
+    appointment_date: '',
+    appointment_time: '',
+    notes: '',
+    status: 'scheduled' as const
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  
+  const supabase = createClientComponentClient();
 
-  const watchedDate = watch('date')
-  const watchedServiceId = watch('service_id')
-
-  // Load service details when service changes
+  // Carregar dados do agendamento para edição
   useEffect(() => {
-    if (watchedServiceId) {
-      loadServiceDetails(watchedServiceId)
+    if (appointment) {
+      loadAppointmentData();
     }
-  }, [watchedServiceId])
+  }, [appointment]);
 
-  // Load available time slots when date or service changes
+  // Carregar horários disponíveis quando serviço e data forem selecionados
   useEffect(() => {
-    if (watchedDate && selectedService) {
-      loadAvailableSlots(watchedDate, selectedService.duration)
+    if (selectedService && formData.appointment_date) {
+      loadAvailableSlots(formData.appointment_date, selectedService.duration_minutes);
     }
-  }, [watchedDate, selectedService])
+  }, [selectedService, formData.appointment_date]);
+
+  const loadAppointmentData = async () => {
+    if (!appointment) return;
+
+    try {
+      // Carregar dados completos do agendamento
+      const { data, error } = await supabase
+        .from('appointments')
+        .select(`
+          *,
+          clients (*),
+          pets (*),
+          services (*)
+        `)
+        .eq('id', appointment.id)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setSelectedClient(data.clients);
+        setSelectedPet(data.pets);
+        setSelectedService(data.services);
+        setFormData({
+          appointment_date: data.appointment_date,
+          appointment_time: data.appointment_time,
+          notes: data.notes || '',
+          status: data.status
+        });
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados do agendamento:', error);
+    }
+  };
 
   const loadServiceDetails = async (serviceId: string) => {
     try {
@@ -100,285 +96,273 @@ export function AppointmentForm({
         .from('services')
         .select('*')
         .eq('id', serviceId)
-        .eq('company_id', company!.id)
-        .single()
+        .single();
 
-      if (error) throw error
-      setSelectedService(data)
+      if (error) throw error;
+      return data;
     } catch (error) {
-      console.error('Erro ao carregar serviço:', error)
+      console.error('Erro ao carregar detalhes do serviço:', error);
+      return null;
     }
-  }
+  };
 
-  const loadAvailableSlots = async (date: string, serviceDuration: number) => {
+  const loadAvailableSlots = async (date: string, duration: number) => {
+    setLoadingSlots(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: userData } = await supabase
+        .from('users')
+        .select('company_id')
+        .eq('id', user.id)
+        .single();
+
+      if (!userData?.company_id) return;
+
       // Buscar agendamentos existentes para a data
       const { data: existingAppointments, error } = await supabase
         .from('appointments')
-        .select('date_time, duration_minutes')
-        .gte('date_time', `${date}T00:00:00`)
-        .lt('date_time', `${date}T23:59:59`)
-        .eq('company_id', company!.id)
-        .neq('status', 'cancelled')
+        .select('appointment_time, services(duration_minutes)')
+        .eq('company_id', userData.company_id)
+        .eq('appointment_date', date)
+        .neq('status', 'cancelled');
 
-      if (error) throw error
+      if (error) throw error;
 
-      // Gerar slots disponíveis (8:00 às 18:00, intervalos de 30 min)
-      const allSlots: string[] = []
+      // Gerar horários disponíveis (8h às 18h, intervalos de 30min)
+      const slots = [];
       for (let hour = 8; hour < 18; hour++) {
         for (let minute = 0; minute < 60; minute += 30) {
-          const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
-          allSlots.push(time)
+          const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+          slots.push(time);
         }
       }
 
-      // Filtrar slots ocupados
-      const availableSlots = allSlots.filter(slot => {
-        const slotStart = slot
-        const slotEnd = format(addMinutes(parseISO(`2000-01-01T${slot}:00`), serviceDuration), 'HH:mm')
+      // Filtrar horários ocupados
+      const occupiedSlots = new Set();
+      existingAppointments?.forEach(apt => {
+        if (apt.appointment_time && apt.services?.duration_minutes) {
+          const [hours, minutes] = apt.appointment_time.split(':').map(Number);
+          const startTime = hours * 60 + minutes;
+          const endTime = startTime + apt.services.duration_minutes;
+          
+          // Marcar todos os slots ocupados durante a duração do serviço
+          for (let time = startTime; time < endTime; time += 30) {
+            const h = Math.floor(time / 60);
+            const m = time % 60;
+            const slot = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+            occupiedSlots.add(slot);
+          }
+        }
+      });
 
-        // Verificar se o slot conflita com algum agendamento existente
-        return !existingAppointments?.some(appointment => {
-          const appointmentDateTime = new Date(appointment.date_time)
-          const appointmentStart = format(appointmentDateTime, 'HH:mm')
-          const appointmentEnd = format(addMinutes(appointmentDateTime, appointment.duration_minutes || 60), 'HH:mm')
+      // Filtrar slots que não têm tempo suficiente para o serviço
+      const availableSlots = slots.filter(slot => {
+        const [hours, minutes] = slot.split(':').map(Number);
+        const slotTime = hours * 60 + minutes;
+        const endTime = slotTime + duration;
+        
+        // Verificar se o serviço cabe no horário de funcionamento
+        if (endTime > 18 * 60) return false;
+        
+        // Verificar se algum slot necessário está ocupado
+        for (let time = slotTime; time < endTime; time += 30) {
+          const h = Math.floor(time / 60);
+          const m = time % 60;
+          const checkSlot = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+          if (occupiedSlots.has(checkSlot)) return false;
+        }
+        
+        return true;
+      });
 
-          // Verificar sobreposição
-          return (
-            (slotStart >= appointmentStart && slotStart < appointmentEnd) ||
-            (slotEnd > appointmentStart && slotEnd <= appointmentEnd) ||
-            (slotStart <= appointmentStart && slotEnd >= appointmentEnd)
-          )
-        })
-      })
-
-      setAvailableSlots(availableSlots)
+      setAvailableSlots(availableSlots);
     } catch (error) {
-      console.error('Erro ao carregar horários disponíveis:', error)
-      setAvailableSlots([])
-    }
-  }
-
-  const onSubmit = async (data: AppointmentFormData) => {
-    try {
-      setLoading(true)
-
-      if (!selectedService) {
-        toast.error('Selecione um serviço válido')
-        return
-      }
-
-      // Combinar data e hora em date_time
-      const dateTime = new Date(`${data.date}T${data.start_time}:00`)
-      
-      const appointmentData = {
-        client_id: data.client_id,
-        pet_id: data.pet_id || null,
-        service_id: data.service_id,
-        date_time: dateTime.toISOString(),
-        duration_minutes: selectedService.duration,
-        status: 'scheduled' as const,
-        notes: data.notes || null,
-        service_price: selectedService.price,
-        total_amount: selectedService.price,
-        company_id: company!.id,
-      }
-
-      let appointmentId: string
-
-      if (isEditing && initialData?.id) {
-        const { error } = await supabase
-          .from('appointments')
-          .update(appointmentData)
-          .eq('id', initialData.id)
-          .eq('company_id', company!.id)
-
-        if (error) throw error
-        appointmentId = initialData.id
-        toast.success('Agendamento atualizado com sucesso!')
-      } else {
-        const { data: newAppointment, error } = await supabase
-          .from('appointments')
-          .insert([appointmentData])
-          .select('id')
-          .single()
-
-        if (error) throw error
-        appointmentId = newAppointment.id
-        toast.success('Agendamento criado com sucesso!')
-      }
-
-      // Enviar notificação se solicitado
-      if (data.send_notification && !isEditing) {
-        try {
-          await supabase.functions.invoke('send-appointment-notification', {
-            body: {
-              appointmentId,
-              type: 'confirmation'
-            }
-          })
-        } catch (notificationError) {
-          console.error('Erro ao enviar notificação:', notificationError)
-          // Não falhar o agendamento por causa da notificação
-        }
-      }
-
-      router.push('/appointments')
-    } catch (error: any) {
-      console.error('Erro ao salvar agendamento:', error)
-      toast.error(error.message || 'Erro ao salvar agendamento')
+      console.error('Erro ao carregar horários disponíveis:', error);
+      setAvailableSlots([]);
     } finally {
-      setLoading(false)
+      setLoadingSlots(false);
     }
-  }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedClient || !selectedPet || !selectedService) {
+      setErrors({
+        general: 'Por favor, selecione cliente, pet e serviço'
+      });
+      return;
+    }
+
+    const appointmentData = {
+      client_id: selectedClient.id,
+      pet_id: selectedPet.id,
+      service_id: selectedService.id,
+      appointment_date: formData.appointment_date,
+      appointment_time: formData.appointment_time,
+      notes: formData.notes,
+      status: formData.status,
+      duration_minutes: selectedService.duration_minutes,
+      price: selectedService.price
+    };
+
+    try {
+      const validatedData = appointmentSchema.parse(appointmentData);
+      await onSubmit(validatedData as AppointmentFormData);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const fieldErrors: Record<string, string> = {};
+        error.errors.forEach(err => {
+          if (err.path[0]) {
+            fieldErrors[err.path[0] as string] = err.message;
+          }
+        });
+        setErrors(fieldErrors);
+      } else {
+        setErrors({ general: 'Erro ao salvar agendamento' });
+      }
+    }
+  };
+
+  const today = new Date().toISOString().split('T')[0];
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            {/* Client Selection */}
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Cliente *
-              </label>
-              <ClientSelector
-                value={watch('client_id')}
-                onChange={(clientId) => setValue('client_id', clientId)}
-                disabled={!!preSelectedClientId}
-              />
-              {errors.client_id && (
-                <p className="mt-1 text-sm text-red-600">{errors.client_id.message}</p>
-              )}
-            </div>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {errors.general && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+          {errors.general}
+        </div>
+      )}
 
-            {/* Pet Selection */}
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Pet (Opcional)
-              </label>
-              <PetSelector
-                clientId={watch('client_id')}
-                value={watch('pet_id')}
-                onChange={(petId) => setValue('pet_id', petId)}
-                disabled={!watch('client_id')}
-              />
-              {errors.pet_id && (
-                <p className="mt-1 text-sm text-red-600">{errors.pet_id.message}</p>
-              )}
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <ClientSelector
+          selectedClient={selectedClient}
+          onClientSelect={setSelectedClient}
+        />
 
-            {/* Service Selection */}
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Serviço *
-              </label>
-              <ServiceSelector
-                value={watch('service_id')}
-                onChange={(serviceId) => setValue('service_id', serviceId)}
-              />
-              {errors.service_id && (
-                <p className="mt-1 text-sm text-red-600">{errors.service_id.message}</p>
-              )}
-              {selectedService && (
-                <div className="mt-2 p-3 bg-gray-50 rounded-md">
-                  <div className="flex justify-between text-sm">
-                    <span>Duração: {selectedService.duration} minutos</span>
-                    <span>Preço: {new Intl.NumberFormat('pt-BR', {
-                      style: 'currency',
-                      currency: 'BRL'
-                    }).format(selectedService.price)}</span>
-                  </div>
-                </div>
-              )}
-            </div>
+        <PetSelector
+          selectedPet={selectedPet}
+          onPetSelect={setSelectedPet}
+          clientId={selectedClient?.id}
+        />
+      </div>
 
-            {/* Date Selection */}
+      <ServiceSelector
+        selectedService={selectedService}
+        onServiceSelect={setSelectedService}
+      />
+
+      {selectedService && (
+        <div className="bg-gray-50 p-4 rounded-lg">
+          <h4 className="font-medium text-gray-900 mb-2">Detalhes do Serviço</h4>
+          <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <label htmlFor="date" className="block text-sm font-medium text-gray-700">
-                Data *
-              </label>
-              <input
-                type="date"
-                id="date"
-                {...register('date')}
-                min={format(new Date(), 'yyyy-MM-dd')}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-              />
-              {errors.date && (
-                <p className="mt-1 text-sm text-red-600">{errors.date.message}</p>
-              )}
+              <span className="text-gray-600">Duração:</span>
+              <span className="ml-2 font-medium">{selectedService.duration_minutes} minutos</span>
             </div>
-
-            {/* Time Selection */}
             <div>
-              <label htmlFor="start_time" className="block text-sm font-medium text-gray-700">
-                Horário *
-              </label>
-              <TimeSlotPicker
-                availableSlots={availableSlots}
-                selectedSlot={watch('start_time')}
-                onSlotSelect={(slot) => setValue('start_time', slot)}
-                disabled={!watchedDate || !selectedService}
-              />
-              {errors.start_time && (
-                <p className="mt-1 text-sm text-red-600">{errors.start_time.message}</p>
-              )}
+              <span className="text-gray-600">Preço:</span>
+              <span className="ml-2 font-medium">{formatCurrency(selectedService.price)}</span>
             </div>
-
-            {/* Notes */}
-            <div className="sm:col-span-2">
-              <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
-                Observações
-              </label>
-              <textarea
-                id="notes"
-                rows={3}
-                {...register('notes')}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
-                placeholder="Informações adicionais sobre o agendamento..."
-              />
-              {errors.notes && (
-                <p className="mt-1 text-sm text-red-600">{errors.notes.message}</p>
-              )}
-            </div>
-
-            {/* Send Notification */}
-            {!isEditing && (
-              <div className="sm:col-span-2">
-                <div className="flex items-center">
-                  <input
-                    id="send_notification"
-                    type="checkbox"
-                    {...register('send_notification')}
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="send_notification" className="ml-2 block text-sm text-gray-900">
-                    Enviar notificação de confirmação para o cliente
-                  </label>
-                </div>
-              </div>
-            )}
           </div>
         </div>
+      )}
 
-        {/* Form Actions */}
-        <div className="px-4 py-3 bg-gray-50 text-right sm:px-6 rounded-b-lg">
-          <div className="flex justify-end space-x-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.back()}
-              disabled={loading}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Data do Agendamento *
+          </label>
+          <input
+            type="date"
+            value={formData.appointment_date}
+            onChange={(e) => setFormData({ ...formData, appointment_date: e.target.value })}
+            min={today}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            required
+          />
+          {errors.appointment_date && (
+            <p className="mt-1 text-sm text-red-600">{errors.appointment_date}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Horário *
+          </label>
+          {loadingSlots ? (
+            <div className="animate-pulse bg-gray-200 h-10 rounded-md"></div>
+          ) : (
+            <select
+              value={formData.appointment_time}
+              onChange={(e) => setFormData({ ...formData, appointment_time: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required
+              disabled={!selectedService || !formData.appointment_date}
             >
-              Cancelar
-            </Button>
-            <Button type="submit" loading={loading}>
-              {isEditing ? 'Atualizar Agendamento' : 'Criar Agendamento'}
-            </Button>
-          </div>
+              <option value="">Selecione um horário</option>
+              {availableSlots.map(slot => (
+                <option key={slot} value={slot}>{slot}</option>
+              ))}
+            </select>
+          )}
+          {errors.appointment_time && (
+            <p className="mt-1 text-sm text-red-600">{errors.appointment_time}</p>
+          )}
         </div>
       </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Observações
+        </label>
+        <textarea
+          value={formData.notes}
+          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+          rows={3}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          placeholder="Observações adicionais sobre o agendamento..."
+        />
+      </div>
+
+      {appointment && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Status
+          </label>
+          <select
+            value={formData.status}
+            onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="scheduled">Agendado</option>
+            <option value="confirmed">Confirmado</option>
+            <option value="in_progress">Em Andamento</option>
+            <option value="completed">Concluído</option>
+            <option value="cancelled">Cancelado</option>
+          </select>
+        </div>
+      )}
+
+      <div className="flex justify-end space-x-4">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+          disabled={loading}
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md transition-colors disabled:opacity-50"
+          disabled={loading || !selectedClient || !selectedPet || !selectedService}
+        >
+          {loading ? 'Salvando...' : appointment ? 'Atualizar' : 'Criar'} Agendamento
+        </button>
+      </div>
     </form>
-  )
+  );
 }
